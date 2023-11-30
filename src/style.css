@@ -1,0 +1,110 @@
+canvas {
+  width: 100%;
+  height: 100%;
+}
+* {
+  font-family: monospace;
+  font-weight: bold;
+}
+html,
+body {
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  margin: 0;
+}
+#dialog {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  z-index: 900;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+#dialog > #shadow {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  z-index: 910;
+  top: 0;
+  left: 0;
+  background-color: #0007;
+}
+#dialog > #content {
+  z-index: 920;
+  padding: 1rem;
+  background-color: #fff;
+}
+#dialog > #content > #title {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+#dialog > #content > #form {
+  width: 100%;
+}
+div.input-field {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  justify-content: space-between;
+  width: calc(100% - 1rem);
+  border: thin solid #aaf;
+  padding: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+div.input-field > label {
+  padding: 0.25rem;
+}
+div.input-field > div {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  gap: 0.5rem;
+}
+div.input-field > div > input {
+  background-color: #eee;
+  border: thin solid #aaf;
+  box-sizing: border-box;
+  padding: 0.25rem;
+}
+div.input-field > div > input:hover {
+  box-shadow: #77f 0px 0px 0px 0.1rem;
+  opacity: 0.75;
+}
+div.input-field > div > input:active {
+  border: thin solid #77f;
+}
+div.input-field > div > input[type="button"]:active {
+  background-color: #77e;
+}
+#netstat {
+  position: absolute;
+  /* width: 1rem; */
+  height: 1rem;
+  bottom: 1rem;
+  left: 1rem;
+  overflow: hidden;
+  font-size: 1rem;
+  user-select: none;
+  color: #000;
+  text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff,
+    1px 1px 0 #fff;
+}
+#config {
+  position: absolute;
+  width: 1rem;
+  height: 1rem;
+  bottom: 1rem;
+  right: 1rem;
+  overflow: hidden;
+  font-size: 1rem;
+  cursor: pointer;
+  user-select: none;
+  color: #000;
+  text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff,
+    1px 1px 0 #fff;
+}
