@@ -19,7 +19,7 @@ canvas {
   height: 1rem;
   font-size: 1rem;
   font-family: monospace;
-  font-weight: semi-bold;
+  font-weight: 600;
   color: #ffffff;
   user-select: none;
 }
