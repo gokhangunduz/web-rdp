@@ -262,6 +262,9 @@
             );
           } else resolve();
         }
+
+        console.log(window.location);
+
         var mySocketRef = new WebSocket(
           `${window.location.protocol.replace("http", "ws")}://${
             window.location.host
