@@ -263,13 +263,7 @@
           } else resolve();
         }
 
-        console.log(window.location);
-
-        var mySocketRef = new WebSocket(
-          `${window.location.protocol.replace("http", "ws")}://${
-            window.location.host
-          }/inputWS`
-        );
+        var mySocketRef = new WebSocket(`ws://${window.location.host}/inputWS`);
         mySocketRef.binaryType = "arraybuffer";
         mySocketRef.onmessage = inputSocketMessage;
         mySocketRef.onopen = inputSocketOpen;
