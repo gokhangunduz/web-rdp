@@ -1,7 +1,3 @@
-* {
-  font-family: monospace;
-  font-weight: bold;
-}
 html,
 body {
   width: 100%;
@@ -18,12 +14,12 @@ canvas {
 
 #netstat {
   position: absolute;
-  /* width: 1rem; */
-  height: 1rem;
-  bottom: 1rem;
   left: 1rem;
-  overflow: hidden;
+  bottom: 1rem;
+  height: 1rem;
   font-size: 1rem;
-  user-select: none;
+  font-family: monospace;
+  font-weight: semi-bold;
   color: #ffffff;
+  user-select: none;
 }
