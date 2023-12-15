@@ -216,7 +216,7 @@ async def streamWS(request: aiohttp.web.Request) -> aiohttp.web.StreamResponse:
 
                                 # Write body
                                 cropped = image.crop(diff_bbox)
-                                cropped.save(fp=buffer, format='JPEG', quality=quality)
+                                cropped.save(fp=buffer, format='WEBP', quality=quality)
                                 last_frame = image
                                 partial_frames_since_last_full_repaint_frame += 1
 
