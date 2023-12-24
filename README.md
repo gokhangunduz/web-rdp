@@ -33,6 +33,14 @@ Start the project by running the following command in the terminal:
 start.bat
 ```
 
+#### **Control:**
+
+Open the relevant url with the browser.
+
+```bash
+<http - https>://<windows-host-ip>:7417
+```
+
 ## Contribution
 
 web-rdp is an open source project and has a repository on GitHub. It is recommended that the project be forked and run on their local machine by developers willing to contribute. They can then create a pull request to push their changes back to the main repository.
