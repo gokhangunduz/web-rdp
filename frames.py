@@ -50,16 +50,22 @@ class FrameEncoder:
         buffer.write(encode_int16(real_width))
         buffer.write(encode_int16(real_height))
 
-        if self.last_frame is not None:
-            diff_bbox = PIL.ImageChops.difference(self.last_frame, image).getbbox()
-
-        if (
+        needs_full_repaint = (
             self.last_frame is None
+            or self.last_frame.size != image.size
             or self.viewport_width != viewport_width
             or self.viewport_height != viewport_height
             or self.partial_frames > MIN_PARTIAL_FRAMES_BEFORE_FULL_REPAINT
             or self.empty_frames > MIN_EMPTY_FRAMES_BEFORE_FULL_REPAINT
-        ):
+        )
+
+        # Only diff frames of identical size, ImageChops raises on a mismatch
+        # (e.g. the browser window was resized) which used to freeze the stream.
+        diff_bbox = None
+        if not needs_full_repaint:
+            diff_bbox = PIL.ImageChops.difference(self.last_frame, image).getbbox()
+
+        if needs_full_repaint:
             buffer.write(encode_int8(FRAME_FULL))
             image.save(fp=buffer, format="JPEG", quality=quality)
             self.last_frame = image
