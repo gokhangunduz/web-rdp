@@ -7,6 +7,7 @@ import aiohttp.web
 
 from auth import make_auth_middleware
 from config import Config, parse_args
+from inputs import ScreenInfo, create_backend, load_allowed_keys
 from ws import inputWS, streamWS
 
 # Resolve assets next to this file so the server works from any directory
@@ -35,10 +36,15 @@ def make_static_handler(file_name: str, content_type: str):
     return handler
 
 
-def make_app(config: Config) -> aiohttp.web.Application:
+def make_app(config: Config, input_backend=None) -> aiohttp.web.Application:
     app = aiohttp.web.Application(
         middlewares=[make_auth_middleware(config.username, config.password)]
     )
+
+    # State shared with the websocket handlers
+    app["screen"] = ScreenInfo()
+    app["allowed_keys"] = load_allowed_keys(SRC_DIR / "keys.json")
+    app["input_backend"] = input_backend or create_backend()
 
     for url, (file_name, content_type) in STATIC_FILES.items():
         app.router.add_get(url, make_static_handler(file_name, content_type))
