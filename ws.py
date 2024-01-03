@@ -11,9 +11,14 @@ from controller import (
     decode_int16,
 )
 from frames import FrameEncoder, grab_screen
-from inputs import InputController, decode_input_packet
+from inputs import InputController, ScreenInfo, decode_input_packet
 
 log = logging.getLogger(__name__)
+
+# Typed application state keys, set up in web-rdp.py
+SCREEN = aiohttp.web.AppKey("screen", ScreenInfo)
+ALLOWED_KEYS = aiohttp.web.AppKey("allowed_keys", frozenset)
+INPUT_BACKEND = aiohttp.web.AppKey("input_backend", object)
 
 # Seconds between websocket pings, dead peers are dropped after missing one
 HEARTBEAT = 20
@@ -38,7 +43,7 @@ async def inputWS(request: aiohttp.web.Request) -> aiohttp.web.StreamResponse:
 
     loop = asyncio.get_running_loop()
     controller = InputController(
-        request.app["input_backend"], request.app["screen"], request.app["allowed_keys"]
+        request.app[INPUT_BACKEND], request.app[SCREEN], request.app[ALLOWED_KEYS]
     )
 
     try:
@@ -71,7 +76,7 @@ async def streamWS(request: aiohttp.web.Request) -> aiohttp.web.StreamResponse:
     await ws.prepare(request)
 
     loop = asyncio.get_running_loop()
-    screen = request.app["screen"]
+    screen = request.app[SCREEN]
     encoder = FrameEncoder()
 
     async for msg in ws:
