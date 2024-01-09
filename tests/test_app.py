@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import json
 
@@ -93,8 +94,12 @@ async def test_input_is_replayed_and_released_on_disconnect(client, backend):
     await socket.send_bytes(input_packet([[0, 100, 200], [4, "a"], [1, 10, 10, 0]]))
     await socket.send_bytes(input_packet([[4, "not a real key"], [1, 10, 10, 9]]))
     await socket.close()
-    # Let the server finish its cleanup
-    await client.server.close()
+
+    # The server releases held inputs once it notices the disconnect
+    for _ in range(100):
+        if {"keyUp", "mouseUp"} <= {call[0] for call in backend.calls}:
+            break
+        await asyncio.sleep(0.02)
 
     names = [call[0] for call in backend.calls]
     assert names[:3] == ["moveTo", "keyDown", "mouseDown"]
