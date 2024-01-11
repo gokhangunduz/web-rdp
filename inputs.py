@@ -2,6 +2,7 @@
 
 import json
 import logging
+import sys
 from pathlib import Path
 from typing import Iterable, Optional, Sequence
 
@@ -27,6 +28,21 @@ def load_allowed_keys(path: Path) -> frozenset:
     """Key names pyautogui may press: the values of keys.json."""
     with open(path, "r", encoding="utf-8") as f:
         return frozenset(json.load(f).values())
+
+
+def enable_dpi_awareness():
+    """Make Windows report real pixels, so capture and input agree on scaled displays."""
+    if sys.platform != "win32":
+        return
+    import ctypes
+
+    try:
+        ctypes.windll.shcore.SetProcessDpiAwareness(2)  # per monitor
+    except (AttributeError, OSError):
+        try:
+            ctypes.windll.user32.SetProcessDPIAware()
+        except (AttributeError, OSError):
+            log.warning("could not enable DPI awareness")
 
 
 def create_backend():

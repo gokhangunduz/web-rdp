@@ -7,7 +7,7 @@ import aiohttp.web
 
 from auth import make_auth_middleware
 from config import Config, parse_args
-from inputs import ScreenInfo, create_backend, load_allowed_keys
+from inputs import ScreenInfo, create_backend, enable_dpi_awareness, load_allowed_keys
 from ws import ALLOWED_KEYS, INPUT_BACKEND, SCREEN, inputWS, streamWS
 
 # Resolve assets next to this file so the server works from any directory
@@ -67,6 +67,7 @@ def main():
         level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s"
     )
     config = parse_args()
+    enable_dpi_awareness()
     scheme = "https" if config.tls else "http"
 
     print(f"web-rdp listening on {scheme}://{config.host}:{config.port}")
