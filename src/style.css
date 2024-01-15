@@ -23,3 +23,32 @@ canvas {
   color: #ffffff;
   user-select: none;
 }
+
+#toasts {
+  position: fixed;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.toast {
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  background-color: rgba(30, 30, 30, 0.92);
+  color: #ffffff;
+  font-family: sans-serif;
+  font-size: 0.8rem;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+  user-select: none;
+}
+
+.toast.hide {
+  opacity: 0;
+}
