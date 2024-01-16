@@ -16,6 +16,21 @@
     arr[off + 1] = (i >> 8) & 0xff;
   }
 
+  var toastsElement = document.getElementById("toasts");
+
+  // Small non-blocking message at the top of the page
+  function showToast(message, seconds = 3) {
+    const toast = document.createElement("div");
+    toast.className = "toast";
+    toast.textContent = message;
+    toastsElement.appendChild(toast);
+
+    setTimeout(function () {
+      toast.classList.add("hide");
+      setTimeout(() => toast.remove(), 300);
+    }, seconds * 1000);
+  }
+
   var app = {
     viewSocket: null,
     workerLoopTs: 0,
@@ -194,7 +209,7 @@
 
         function viewSocketClose(event) {
           if (event.code !== 4001) {
-            showToast("Input connection closed", 1, 1);
+            showToast("Screen connection closed, reconnecting...");
           }
           clearTimeout(titleSetTimeout);
           document.title = "web-rdp (Disconnected)";
@@ -249,7 +264,7 @@
         function inputSocketClose(event) {
           stopInputLoop();
           if (event.code !== 4001) {
-            showToast("Input connection closed", 1, 1);
+            showToast("Input connection closed, reconnecting...");
           }
           if (app.keepAlive) {
             setTimeout(
