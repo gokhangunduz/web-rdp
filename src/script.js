@@ -16,6 +16,12 @@
     arr[off + 1] = (i >> 8) & 0xff;
   }
 
+  // ws:// on http pages, wss:// on https pages
+  function socketUrl(path) {
+    const scheme = window.location.protocol === "https:" ? "wss:" : "ws:";
+    return `${scheme}//${window.location.host}/${path}`;
+  }
+
   var toastsElement = document.getElementById("toasts");
 
   // Small non-blocking message at the top of the page
@@ -224,11 +230,7 @@
           } else resolve();
         }
 
-        var mySocketRef = new WebSocket(
-          `${window.location.protocol.replace("http", "ws")}//${
-            window.location.host
-          }/streamWS`
-        );
+        var mySocketRef = new WebSocket(socketUrl("streamWS"));
         mySocketRef.binaryType = "arraybuffer";
         mySocketRef.onmessage = viewSocketMessage;
         mySocketRef.onopen = viewSocketOpen;
@@ -278,7 +280,7 @@
           } else resolve();
         }
 
-        var mySocketRef = new WebSocket(`ws://${window.location.host}/inputWS`);
+        var mySocketRef = new WebSocket(socketUrl("inputWS"));
         mySocketRef.binaryType = "arraybuffer";
         mySocketRef.onmessage = inputSocketMessage;
         mySocketRef.onopen = inputSocketOpen;
