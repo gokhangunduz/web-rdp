@@ -290,87 +290,66 @@
 
         var inputEvents = [];
 
-        mouseMoveEvent = function (event) {
+        // Browser coordinates -> pixels of the remote screen, null while no frame arrived
+        function toRemote(event) {
           const { clientWidth, clientHeight } = app.canvas;
           const { width, height } = app.viewport;
           const { width: remoteWidth, height: remoteHeight } = app.remote;
+          if (!width || !height || !remoteWidth || !remoteHeight) return null;
 
+          // The frame is centered on the canvas
           const rectX = clientWidth / 2 - width / 2;
           const rectY = clientHeight / 2 - height / 2;
 
-          const realX = Math.round(
-            ((event.pageX - rectX) * remoteWidth) / width
-          );
-          const realY = Math.round(
-            ((event.pageY - rectY) * remoteHeight) / height
-          );
+          const x = Math.round(((event.clientX - rectX) * remoteWidth) / width);
+          const y = Math.round(((event.clientY - rectY) * remoteHeight) / height);
 
-          inputEvents =
-            inputEvents?.filter(([eventType]) => eventType !== 0) || [];
-          inputEvents.push([0, realX, realY]);
+          return [
+            Math.max(0, Math.min(remoteWidth - 1, x)),
+            Math.max(0, Math.min(remoteHeight - 1, y)),
+          ];
+        }
+
+        const mouseMoveEvent = function (event) {
+          const pos = toRemote(event);
+          if (!pos) return;
+
+          // Only the latest pointer position matters, replace a queued move
+          const last = inputEvents[inputEvents.length - 1];
+          if (last && last[0] === 0) inputEvents.pop();
+          inputEvents.push([0, ...pos]);
         };
 
-        mouseDownEvent = function (event) {
+        const mouseDownEvent = function (event) {
           event.preventDefault();
           event.stopPropagation();
 
-          const { clientWidth, clientHeight } = app.canvas;
-          const { width, height } = app.viewport;
-          const { width: remoteWidth, height: remoteHeight } = app.remote;
-
-          const rectX = clientWidth / 2 - width / 2;
-          const rectY = clientHeight / 2 - height / 2;
-
-          const realX = Math.round(
-            ((event.pageX - rectX) * remoteWidth) / width
-          );
-          const realY = Math.round(
-            ((event.pageY - rectY) * remoteHeight) / height
-          );
-
-          inputEvents.push([1, realX, realY, event.button]);
+          const pos = toRemote(event);
+          if (pos) inputEvents.push([1, ...pos, event.button]);
         };
 
-        mouseUpEvent = function (event) {
+        const mouseUpEvent = function (event) {
           event.preventDefault();
           event.stopPropagation();
-          const rectX = app.canvas.clientWidth / 2 - app.viewport.width / 2;
-          const rectY = app.canvas.clientHeight / 2 - app.viewport.height / 2;
-          const realX = Math.round(
-            ((event.pageX - rectX) * app.remote.width) / app.viewport.width
-          );
-          const realY = Math.round(
-            ((event.pageY - rectY) * app.remote.height) / app.viewport.height
-          );
 
-          inputEvents.push([2, realX, realY, event.button]);
+          const pos = toRemote(event);
+          if (pos) inputEvents.push([2, ...pos, event.button]);
         };
 
-        mouseScrollEvent = function (event) {
-          const { clientWidth, clientHeight } = app.canvas;
-          const { width, height } = app.viewport;
-          const { width: remoteWidth, height: remoteHeight } = app.remote;
+        const mouseScrollEvent = function (event) {
+          event.preventDefault();
 
-          const rectX = clientWidth / 2 - width / 2;
-          const rectY = clientHeight / 2 - height / 2;
-
-          const realX = Math.round(
-            ((event.pageX - rectX) * remoteWidth) / width
-          );
-          const realY = Math.round(
-            ((event.pageY - rectY) * remoteHeight) / height
-          );
-
-          inputEvents.push([3, realX, realY, -event.deltaY]);
+          const pos = toRemote(event);
+          if (pos) inputEvents.push([3, ...pos, -event.deltaY]);
         };
 
-        mouseContextEvent = function (event) {
+        const mouseContextEvent = function (event) {
           event.preventDefault();
           event.stopPropagation();
           return false;
         };
 
-        keyDownEvent = function (event) {
+        const keyDownEvent = function (event) {
           event.preventDefault();
           event.stopPropagation();
 
@@ -379,7 +358,7 @@
           }
         };
 
-        keyUpEvent = function (event) {
+        const keyUpEvent = function (event) {
           event.preventDefault();
           event.stopPropagation();
 
