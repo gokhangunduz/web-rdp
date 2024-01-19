@@ -280,15 +280,24 @@
           } else resolve();
         }
 
-        var mySocketRef = new WebSocket(socketUrl("inputWS"));
-        mySocketRef.binaryType = "arraybuffer";
-        mySocketRef.onmessage = inputSocketMessage;
-        mySocketRef.onopen = inputSocketOpen;
-        mySocketRef.onclose = inputSocketClose;
-        app.inputSocket = mySocketRef;
-        const jsToPyKeys = await fetch("/keys.json").then((res) => res.json());
+        // Load the key table first: the handlers below are only defined after
+        // this point and the socket may open as soon as it is created
+        let jsToPyKeys;
+        try {
+          jsToPyKeys = await fetch("/keys.json").then((res) => res.json());
+        } catch (e) {
+          console.error(e);
+          showToast("Could not load key map, retrying...");
+          setTimeout(makeInputConnection, 2000);
+          return;
+        }
 
         var inputEvents = [];
+
+        // Keys and mouse buttons currently held down
+        const pressedKeys = new Set();
+        const pressedButtons = new Set();
+        let lastRemotePos = null;
 
         // Browser coordinates -> pixels of the remote screen, null while no frame arrived
         function toRemote(event) {
@@ -304,10 +313,11 @@
           const x = Math.round(((event.clientX - rectX) * remoteWidth) / width);
           const y = Math.round(((event.clientY - rectY) * remoteHeight) / height);
 
-          return [
+          lastRemotePos = [
             Math.max(0, Math.min(remoteWidth - 1, x)),
             Math.max(0, Math.min(remoteHeight - 1, y)),
           ];
+          return lastRemotePos;
         }
 
         const mouseMoveEvent = function (event) {
@@ -325,15 +335,24 @@
           event.stopPropagation();
 
           const pos = toRemote(event);
-          if (pos) inputEvents.push([1, ...pos, event.button]);
+          if (!pos) return;
+
+          pressedButtons.add(event.button);
+          inputEvents.push([1, ...pos, event.button]);
         };
 
         const mouseUpEvent = function (event) {
           event.preventDefault();
           event.stopPropagation();
 
+          // Ignore releases of buttons that were not pressed on this page
+          if (!pressedButtons.has(event.button)) return;
+
           const pos = toRemote(event);
-          if (pos) inputEvents.push([2, ...pos, event.button]);
+          if (!pos) return;
+
+          pressedButtons.delete(event.button);
+          inputEvents.push([2, ...pos, event.button]);
         };
 
         const mouseScrollEvent = function (event) {
@@ -350,36 +369,58 @@
         };
 
         const keyDownEvent = function (event) {
+          // Keys without a mapping stay with the browser
+          if (!(event.code in jsToPyKeys)) return;
+
           event.preventDefault();
           event.stopPropagation();
 
-          if (event.code in jsToPyKeys) {
-            inputEvents.push([4, jsToPyKeys[event.code]]);
-          }
+          pressedKeys.add(event.code);
+          inputEvents.push([4, jsToPyKeys[event.code]]);
         };
 
         const keyUpEvent = function (event) {
+          if (!(event.code in jsToPyKeys)) return;
+
           event.preventDefault();
           event.stopPropagation();
 
-          const ShiftLeftPressed = event.code === "ShiftLeft";
-          const ShiftRightPressed = event.code === "ShiftRight";
+          // macOS never reports the release of keys pressed while Meta is
+          // held, so letting go of Meta releases everything to avoid stuck keys
+          if (event.code === "MetaLeft" || event.code === "MetaRight") {
+            releaseAllInputs();
+            return;
+          }
 
-          ShiftLeftPressed && inputEvents.push([5, jsToPyKeys["ShiftLeft"]]);
-          ShiftRightPressed && inputEvents.push([5, jsToPyKeys["ShiftRight"]]);
-
+          pressedKeys.delete(event.code);
           inputEvents.push([5, jsToPyKeys[event.code]]);
-          return false;
+        };
+
+        // Let go of every key and button held down, e.g. when the tab loses focus
+        const releaseAllInputs = function () {
+          for (const code of pressedKeys) {
+            inputEvents.push([5, jsToPyKeys[code]]);
+          }
+          pressedKeys.clear();
+
+          if (lastRemotePos) {
+            for (const button of pressedButtons) {
+              inputEvents.push([2, ...lastRemotePos, button]);
+            }
+          }
+          pressedButtons.clear();
         };
 
         function startInputLoop() {
           app.canvas.addEventListener("mousemove", mouseMoveEvent);
           app.canvas.addEventListener("wheel", mouseScrollEvent);
           app.canvas.addEventListener("mousedown", mouseDownEvent);
-          app.canvas.addEventListener("mouseup", mouseUpEvent);
+          // On window so releasing outside of the canvas is seen too
+          window.addEventListener("mouseup", mouseUpEvent);
           app.canvas.addEventListener("contextmenu", mouseContextEvent);
           document.addEventListener("keydown", keyDownEvent);
           document.addEventListener("keyup", keyUpEvent);
+          window.addEventListener("blur", releaseAllInputs);
 
           var pushInput = function () {
             if (!app.keepAlive || mySocketRef.readyState === WebSocket.CLOSED) {
@@ -416,12 +457,22 @@
           app.canvas.removeEventListener("mousemove", mouseMoveEvent);
           app.canvas.removeEventListener("wheel", mouseScrollEvent);
           app.canvas.removeEventListener("mousedown", mouseDownEvent);
-          app.canvas.removeEventListener("mouseup", mouseUpEvent);
+          window.removeEventListener("mouseup", mouseUpEvent);
           app.canvas.removeEventListener("contextmenu", mouseContextEvent);
           document.removeEventListener("keydown", keyDownEvent);
           document.removeEventListener("keyup", keyUpEvent);
+          window.removeEventListener("blur", releaseAllInputs);
+          pressedKeys.clear();
+          pressedButtons.clear();
           inputEvents = [];
         }
+
+        var mySocketRef = new WebSocket(socketUrl("inputWS"));
+        mySocketRef.binaryType = "arraybuffer";
+        mySocketRef.onmessage = inputSocketMessage;
+        mySocketRef.onopen = inputSocketOpen;
+        mySocketRef.onclose = inputSocketClose;
+        app.inputSocket = mySocketRef;
       };
       makeInputConnection();
     });
