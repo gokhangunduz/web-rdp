@@ -55,7 +55,7 @@
     props: {
       quality: 60,
       fps: 50,
-      ips: 5,
+      ips: 60,
     },
   };
 
@@ -293,6 +293,43 @@
         }
 
         var inputEvents = [];
+        var flushTimer = null;
+        var lastFlush = 0;
+
+        // Queue an event and send the queue at most `ips` times per second.
+        // The first event after a quiet period goes out immediately.
+        function enqueue(inputEvent) {
+          inputEvents.push(inputEvent);
+          if (flushTimer !== null) return;
+
+          const wait = Math.max(
+            0,
+            lastFlush + 1000.0 / getProp("ips") - Date.now()
+          );
+          flushTimer = setTimeout(flushInput, wait);
+        }
+
+        function flushInput() {
+          flushTimer = null;
+          if (!inputEvents.length) return;
+
+          const events = inputEvents;
+          inputEvents = [];
+          if (!app.keepAlive || mySocketRef.readyState !== WebSocket.OPEN) {
+            return; // the connection is gone, stale input must not be replayed
+          }
+
+          try {
+            const body = new TextEncoder().encode(JSON.stringify(events));
+            const packet = new Uint8Array(1 + body.length);
+            encode_int8(0x03, packet, 0);
+            packet.set(body, 1);
+            mySocketRef.send(packet.buffer);
+            lastFlush = Date.now();
+          } catch (e) {
+            console.error(e);
+          }
+        }
 
         // Keys and mouse buttons currently held down
         const pressedKeys = new Set();
@@ -327,7 +364,7 @@
           // Only the latest pointer position matters, replace a queued move
           const last = inputEvents[inputEvents.length - 1];
           if (last && last[0] === 0) inputEvents.pop();
-          inputEvents.push([0, ...pos]);
+          enqueue([0, ...pos]);
         };
 
         const mouseDownEvent = function (event) {
@@ -338,7 +375,7 @@
           if (!pos) return;
 
           pressedButtons.add(event.button);
-          inputEvents.push([1, ...pos, event.button]);
+          enqueue([1, ...pos, event.button]);
         };
 
         const mouseUpEvent = function (event) {
@@ -352,14 +389,14 @@
           if (!pos) return;
 
           pressedButtons.delete(event.button);
-          inputEvents.push([2, ...pos, event.button]);
+          enqueue([2, ...pos, event.button]);
         };
 
         const mouseScrollEvent = function (event) {
           event.preventDefault();
 
           const pos = toRemote(event);
-          if (pos) inputEvents.push([3, ...pos, -event.deltaY]);
+          if (pos) enqueue([3, ...pos, -event.deltaY]);
         };
 
         const mouseContextEvent = function (event) {
@@ -376,7 +413,7 @@
           event.stopPropagation();
 
           pressedKeys.add(event.code);
-          inputEvents.push([4, jsToPyKeys[event.code]]);
+          enqueue([4, jsToPyKeys[event.code]]);
         };
 
         const keyUpEvent = function (event) {
@@ -393,19 +430,19 @@
           }
 
           pressedKeys.delete(event.code);
-          inputEvents.push([5, jsToPyKeys[event.code]]);
+          enqueue([5, jsToPyKeys[event.code]]);
         };
 
         // Let go of every key and button held down, e.g. when the tab loses focus
         const releaseAllInputs = function () {
           for (const code of pressedKeys) {
-            inputEvents.push([5, jsToPyKeys[code]]);
+            enqueue([5, jsToPyKeys[code]]);
           }
           pressedKeys.clear();
 
           if (lastRemotePos) {
             for (const button of pressedButtons) {
-              inputEvents.push([2, ...lastRemotePos, button]);
+              enqueue([2, ...lastRemotePos, button]);
             }
           }
           pressedButtons.clear();
@@ -421,36 +458,6 @@
           document.addEventListener("keydown", keyDownEvent);
           document.addEventListener("keyup", keyUpEvent);
           window.addEventListener("blur", releaseAllInputs);
-
-          var pushInput = function () {
-            if (!app.keepAlive || mySocketRef.readyState === WebSocket.CLOSED) {
-              try {
-                mySocketRef.close();
-              } catch {}
-              return;
-            }
-            try {
-              if (inputEvents.length) {
-                var inputEvents_ = inputEvents;
-                inputEvents_ = inputEvents;
-                inputEvents = [];
-                var serialized = JSON.stringify(inputEvents_);
-                var requestInput__buffer = new Uint8Array(
-                  1 + serialized.length
-                );
-                encode_int8(0x03, requestInput__buffer, 0);
-                for (let ind = 0; ind < serialized.length; ++ind)
-                  requestInput__buffer[ind + 1] = serialized.charCodeAt(ind);
-                mySocketRef.send(requestInput__buffer.buffer);
-                lastInputTs = Date.now();
-                delete requestInput__buffer;
-              }
-            } catch (e) {
-              console.error(e);
-            }
-            setTimeout(pushInput, 1000.0 / getProp("ips"));
-          };
-          setTimeout(pushInput, 1000.0 / getProp("ips"));
         }
 
         function stopInputLoop() {
@@ -464,6 +471,8 @@
           window.removeEventListener("blur", releaseAllInputs);
           pressedKeys.clear();
           pressedButtons.clear();
+          clearTimeout(flushTimer);
+          flushTimer = null;
           inputEvents = [];
         }
 
