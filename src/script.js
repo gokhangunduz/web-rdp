@@ -395,8 +395,12 @@
         const mouseScrollEvent = function (event) {
           event.preventDefault();
 
+          // Firefox reports lines or pages instead of pixels on some devices
+          const unit = [1, 40, 800][event.deltaMode] || 1;
+          const amount = Math.round(-event.deltaY * unit);
+
           const pos = toRemote(event);
-          if (pos) enqueue([3, ...pos, -event.deltaY]);
+          if (pos && amount) enqueue([3, ...pos, amount]);
         };
 
         const mouseContextEvent = function (event) {
