@@ -112,6 +112,8 @@
           }
         };
 
+        // Only called for full frames: a frame request carries the window
+        // size, so the server always answers a resize with a full repaint
         var updateSize = function () {
           if (
             app.canvas.width != window.innerWidth ||
@@ -119,11 +121,17 @@
           ) {
             app.canvas.width = window.innerWidth;
             app.canvas.height = window.innerHeight;
-            app.lineHeight = window.getComputedStyle(document.body).lineHeight;
-            app.pageHeight = window.clientHeight;
           }
         };
         var interframeDelay = 1000.0 / getProp("fps");
+
+        // Top left corner of the frame, which is centered on the canvas
+        var frameOrigin = function () {
+          return [
+            Math.round((app.canvas.width - app.viewport.width) / 2),
+            Math.round((app.canvas.height - app.viewport.height) / 2),
+          ];
+        };
 
         function viewSocketMessage(msg) {
           if (!app.keepAlive || mySocketRef.readyState === WebSocket.CLOSED) {
@@ -132,69 +140,50 @@
             } catch {}
             return;
           }
-          if (msg.data instanceof ArrayBuffer) {
-            var data = new Uint8Array(msg.data);
-            var packet_type = decode_int8(data, 0);
-            if (packet_type == 0x02) {
-              var frameRTT = Date.now() - lastFrameRequestTS;
-              netstatElement.textContent = `${frameRTT}ms`;
-              try {
-                app.remote.width = decode_int16(data, 1);
-                app.remote.height = decode_int16(data, 3);
-                var frame_type = decode_int8(data, 5);
-                if (data.length === 6 || frame_type === 0x00) {
-                  requestFrame();
-                } else if (frame_type === 0x01) {
-                  var blob = new Blob([data.slice(6)], {
-                    type: "image/jpeg",
-                  });
-                  var url = URL.createObjectURL(blob);
-                  delete blob;
-                  var frame = new Image();
-                  frame.onload = function () {
-                    URL.revokeObjectURL(url);
-                    updateSize();
-                    app.canvasContext.drawImage(
-                      frame,
-                      app.canvas.width / 2 - frame.width / 2,
-                      app.canvas.height / 2 - frame.height / 2
-                    );
-                    app.viewport.width = frame.width;
-                    app.viewport.height = frame.height;
-                    delete frame;
-                    requestFrame();
-                  };
-                  frame.src = url;
-                } else if (frame_type === 0x02) {
-                  var crop_x = decode_int16(data, 6);
-                  var crop_y = decode_int16(data, 8);
-                  var blob = new Blob([data.slice(10)], {
-                    type: "image/jpeg",
-                  });
-                  var url = URL.createObjectURL(blob);
-                  delete blob;
-                  var frame = new Image();
-                  frame.onload = function () {
-                    URL.revokeObjectURL(url);
-                    updateSize();
-                    app.canvasContext.drawImage(
-                      frame,
-                      app.canvas.width / 2 - app.viewport.width / 2 + crop_x,
-                      app.canvas.height / 2 - app.viewport.height / 2 + crop_y
-                    );
-                    delete frame;
-                    if (interframeDelay <= frameRTT) requestFrame();
-                    else setTimeout(requestFrame, interframeDelay - frameRTT);
-                  };
-                  frame.src = url;
-                }
-              } catch (e) {
-                console.error(e);
-                if (interframeDelay <= frameRTT) requestFrame();
-                else setTimeout(requestFrame, interframeDelay - frameRTT);
-              }
-            }
-            delete data;
+          if (!(msg.data instanceof ArrayBuffer)) return;
+
+          var data = new Uint8Array(msg.data);
+          if (decode_int8(data, 0) != 0x02) return;
+
+          var frameRTT = Date.now() - lastFrameRequestTS;
+          netstatElement.textContent = `${frameRTT}ms`;
+
+          // Ask for the next frame, but not faster than the configured fps
+          var requestNext = function () {
+            setTimeout(requestFrame, Math.max(0, interframeDelay - frameRTT));
+          };
+
+          if (data.length < 6) return requestNext();
+
+          app.remote.width = decode_int16(data, 1);
+          app.remote.height = decode_int16(data, 3);
+          var frame_type = decode_int8(data, 5);
+
+          if (frame_type === 0x01) {
+            createImageBitmap(new Blob([data.subarray(6)], { type: "image/jpeg" }))
+              .then(function (frame) {
+                updateSize();
+                app.viewport.width = frame.width;
+                app.viewport.height = frame.height;
+                var [x, y] = frameOrigin();
+                app.canvasContext.drawImage(frame, x, y);
+                frame.close();
+              })
+              .catch(console.error)
+              .finally(requestNext);
+          } else if (frame_type === 0x02 && data.length > 10) {
+            var crop_x = decode_int16(data, 6);
+            var crop_y = decode_int16(data, 8);
+            createImageBitmap(new Blob([data.subarray(10)], { type: "image/webp" }))
+              .then(function (frame) {
+                var [x, y] = frameOrigin();
+                app.canvasContext.drawImage(frame, x + crop_x, y + crop_y);
+                frame.close();
+              })
+              .catch(console.error)
+              .finally(requestNext);
+          } else {
+            requestNext(); // nothing changed
           }
         }
         var titleSetTimeout = null;
@@ -343,9 +332,9 @@
           const { width: remoteWidth, height: remoteHeight } = app.remote;
           if (!width || !height || !remoteWidth || !remoteHeight) return null;
 
-          // The frame is centered on the canvas
-          const rectX = clientWidth / 2 - width / 2;
-          const rectY = clientHeight / 2 - height / 2;
+          // The frame is centered on the canvas, same rounding as when drawing
+          const rectX = Math.round((clientWidth - width) / 2);
+          const rectY = Math.round((clientHeight - height) / 2);
 
           const x = Math.round(((event.clientX - rectX) * remoteWidth) / width);
           const y = Math.round(((event.clientY - rectY) * remoteHeight) / height);
