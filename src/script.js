@@ -37,6 +37,11 @@
     }, seconds * 1000);
   }
 
+  document.getElementById("fullscreen").addEventListener("click", function () {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen().catch(console.error);
+  });
+
   var app = {
     viewSocket: null,
     workerLoopTs: 0,
@@ -147,6 +152,8 @@
 
           var frameRTT = Date.now() - lastFrameRequestTS;
           netstatElement.textContent = `${frameRTT}ms`;
+          netstatElement.className =
+            frameRTT < 100 ? "good" : frameRTT < 300 ? "fair" : "poor";
 
           // Ask for the next frame, but not faster than the configured fps
           var requestNext = function () {

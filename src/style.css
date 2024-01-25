@@ -55,3 +55,48 @@ canvas {
 .toast.hide {
   opacity: 0;
 }
+
+#netstat.good {
+  color: #4ade80;
+}
+
+#netstat.fair {
+  color: #facc15;
+}
+
+#netstat.poor {
+  color: #f87171;
+}
+
+#fullscreen {
+  position: fixed;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0.4rem;
+  background-color: rgba(30, 30, 30, 0.7);
+  color: #ffffff;
+  font-size: 1.1rem;
+  line-height: 2rem;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  z-index: 10;
+}
+
+#fullscreen:hover,
+#fullscreen:focus-visible {
+  opacity: 1;
+}
+
+noscript {
+  position: fixed;
+  top: 50%;
+  width: 100%;
+  text-align: center;
+  color: #ffffff;
+  font-family: sans-serif;
+}
