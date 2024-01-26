@@ -44,8 +44,6 @@
 
   var app = {
     viewSocket: null,
-    workerLoopTs: 0,
-    workerLoopShouldRun: false,
     keepAlive: true,
     viewPromise: null,
     inputPromise: null,
@@ -242,10 +240,6 @@
             try {
               app.viewSocket.close();
             } catch {}
-          }
-          if (msg.data instanceof ArrayBuffer) {
-            var data = new Uint8Array(msg.data);
-            delete data;
           }
         }
 
