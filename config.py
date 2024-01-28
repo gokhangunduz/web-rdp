@@ -3,8 +3,9 @@
 import argparse
 import os
 import secrets
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Optional, Sequence
+from typing import Optional
 
 DEFAULT_PORT = 7417
 

@@ -4,7 +4,7 @@ import asyncio
 import base64
 import binascii
 import hmac
-from typing import Optional, Tuple
+from typing import Optional
 from urllib.parse import urlsplit
 
 import aiohttp.web
@@ -13,7 +13,7 @@ import aiohttp.web
 FAILED_LOGIN_DELAY = 1.0
 
 
-def parse_basic_auth(header: Optional[str]) -> Optional[Tuple[str, str]]:
+def parse_basic_auth(header: Optional[str]) -> Optional[tuple[str, str]]:
     """Return (user, password) from an Authorization header, or None."""
     if not header:
         return None
@@ -30,9 +30,7 @@ def parse_basic_auth(header: Optional[str]) -> Optional[Tuple[str, str]]:
     return user, password
 
 
-def credentials_match(
-    given: Optional[Tuple[str, str]], username: str, password: str
-) -> bool:
+def credentials_match(given: Optional[tuple[str, str]], username: str, password: str) -> bool:
     if given is None:
         return False
     # Compare both fields so timing does not reveal which one was wrong.

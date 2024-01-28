@@ -2,13 +2,12 @@ import asyncio
 import base64
 import json
 
-import aiohttp
 import PIL.Image
 import pytest
 
 import ws
 from config import Config
-from controller import PACKET_FRAME_RESPONSE, FRAME_FULL, FRAME_NOP
+from controller import FRAME_FULL, FRAME_NOP, PACKET_FRAME_RESPONSE
 
 AUTH = {"Authorization": "Basic " + base64.b64encode(b"admin:secret").decode()}
 
@@ -26,7 +25,12 @@ async def client(aiohttp_client, web_rdp, backend, screen_image, monkeypatch):
 
 
 def frame_request(width, height, quality=60):
-    return bytes([0x01]) + width.to_bytes(2, "little") + height.to_bytes(2, "little") + bytes([quality])
+    return (
+        bytes([0x01])
+        + width.to_bytes(2, "little")
+        + height.to_bytes(2, "little")
+        + bytes([quality])
+    )
 
 
 def input_packet(events):

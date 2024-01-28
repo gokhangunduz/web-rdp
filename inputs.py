@@ -3,8 +3,9 @@
 import json
 import logging
 import sys
+from collections.abc import Iterable, Sequence
 from pathlib import Path
-from typing import Iterable, Optional, Sequence
+from typing import Optional
 
 log = logging.getLogger(__name__)
 
@@ -26,7 +27,7 @@ MAX_EVENTS_PER_PACKET = 512
 
 def load_allowed_keys(path: Path) -> frozenset:
     """Key names pyautogui may press: the values of keys.json."""
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         return frozenset(json.load(f).values())
 
 
