@@ -77,6 +77,9 @@ def test_decode_input_packet():
 
 
 def test_every_key_in_keys_json_is_a_real_pyautogui_key():
-    pyautogui = pytest.importorskip("pyautogui")
+    try:
+        import pyautogui
+    except Exception as e:  # no display on headless machines
+        pytest.skip(f"pyautogui is unavailable: {e}")
     keys = load_allowed_keys(ROOT / "src" / "keys.json")
     assert keys - set(pyautogui.KEYBOARD_KEYS) == set()
